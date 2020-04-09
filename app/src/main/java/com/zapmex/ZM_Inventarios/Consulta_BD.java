@@ -1,4 +1,4 @@
-package com.example.test2;
+package com.zapmex.ZM_Inventarios;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -9,7 +9,7 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.test2.Utilidad.Utilidades;
+import com.zapmex.ZM_Inventarios.Utilidad.Utilidades;
 
 public class Consulta_BD extends AppCompatActivity {
 

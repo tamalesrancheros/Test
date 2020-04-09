@@ -1,11 +1,11 @@
-package com.example.test2.Entidades;
+package com.zapmex.ZM_Inventarios.Entidades;
 
 public class Lecturas_Entidad {
 
     private int identificador;
     private long codigoBarras;
 
-    public Lecturas_Entidad (){
+    public Lecturas_Entidad(String string){
 
     }
 

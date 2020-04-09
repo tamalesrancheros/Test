@@ -1,4 +1,4 @@
-package com.example.test2;
+package com.zapmex.ZM_Inventarios;
 
 import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 import androidx.annotation.Nullable;
 
-import com.example.test2.Utilidad.Utilidades;
+import com.zapmex.ZM_Inventarios.Utilidad.Utilidades;
 
 public class ConexionSQLite extends SQLiteOpenHelper {
 

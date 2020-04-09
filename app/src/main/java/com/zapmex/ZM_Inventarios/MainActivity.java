@@ -1,14 +1,21 @@
-package com.example.test2;
+package com.zapmex.ZM_Inventarios;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.media.MediaPlayer;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -20,16 +27,20 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.test2.Entidades.Lecturas_Entidad;
-import com.example.test2.Utilidad.Utilidades;
+import com.zapmex.ZM_Inventarios.Entidades.Lecturas_Entidad;
+import com.zapmex.ZM_Inventarios.Utilidad.Utilidades;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
+import java.util.List;
+
+import static android.Manifest.permission.WRITE_EXTERNAL_STORAGE;
 
 
 public class MainActivity extends AppCompatActivity {
     private EditText txtCB;
     private TextView lblMensaje; // conteo
-
 
     private ListView lstLista;
     private ArrayList<Lecturas_Entidad> items_arreglo;  //cambia de String a Lecturas_Entidad
@@ -40,8 +51,11 @@ public class MainActivity extends AppCompatActivity {
     public int vcontador = 0;
     public int valor = 0;
 
-    ConexionSQLite conn;
+    List<Lecturas_Entidad> listaUsuarios = new ArrayList<>();
 
+    Button btnExportar;
+
+    ConexionSQLite conn;
 
     @Override
     protected void onCreate(final Bundle savedInstanceState) {
@@ -54,14 +68,27 @@ public class MainActivity extends AppCompatActivity {
 
         lstLista = (ListView) findViewById(R.id.lstLista);
         botAgregar = (Button) findViewById(R.id.botAgregar);  //BOTON DE AGREGAR - DECLARACION
+        btnExportar = findViewById(R.id.btnExportar);
 
         final ArrayList<Lecturas_Entidad> items_arreglo = new ArrayList<Lecturas_Entidad>(); //array de barcodes //cambia de String a Lecturas_Entidad
 
         adaptador_items = new ArrayAdapter(MainActivity.this, R.layout.support_simple_spinner_dropdown_item, items_arreglo);
         lstLista.setAdapter(adaptador_items);
 
+        pedirPermisos();
+        obtenerUsuarios();
+
+        btnExportar.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                exportarCSV();
+            }
+        });
+
         // Metodo para consultar la base / mostrar el contendio ya escaneado
-        mostrar();
+        //mostrar();
+
 
         txtCB.addTextChangedListener(new TextWatcher() {
             @Override
@@ -86,14 +113,14 @@ public class MainActivity extends AppCompatActivity {
                             valor1=registrarBarcode();
                             valor2=Long.parseLong(txtCB.getText().toString().replace("nn", ""));
                             //añade el barcode al tope del list view
-                            items_arreglo.add(0,new Lecturas_Entidad(valor1, valor2));
-                            lstLista.setAdapter(adaptador_items);
-                            adaptador_items.notifyDataSetChanged();
+                            // items_arreglo.add(0,new Lecturas_Entidad(valor1, valor2));
+                            // lstLista.setAdapter(adaptador_items);
+                            // adaptador_items.notifyDataSetChanged();
 
                             vcontador++;
                             lblMensaje.setText(Integer.toString(vcontador)); //se sube el contador de la lista
 
-                            Toast.makeText(MainActivity.this, "Barcode Agregado", Toast.LENGTH_LONG).show();
+                            //Toast.makeText(MainActivity.this, "Barcode Agregado", Toast.LENGTH_LONG).show();
                             limpiar();
                     }else{
                         Toast.makeText(MainActivity.this, "NO ENCONTRADO", Toast.LENGTH_LONG).show();
@@ -135,7 +162,6 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-
         // metodo para borrar un item de la list view
         // Ademas de que borra el BC de la base de acuerdo al ListView Seleccionado
         // OJO EL METODO DE ELIMINACION ES eliminarUsuario (RENOMBRAR)
@@ -173,6 +199,76 @@ public class MainActivity extends AppCompatActivity {
                 return false;
             }
         });
+    }
+
+
+    //METODO PARA PERMISOS DE ALMACENAMIENTO DENTRO DEL TELEFONO
+    private void pedirPermisos() {
+        if (ContextCompat.checkSelfPermission(
+                MainActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    MainActivity.this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE}, 0);
+        }
+    }
+
+
+    private void obtenerUsuarios() {
+        listaUsuarios.clear();
+
+        ConexionSQLite admin = new ConexionSQLite(MainActivity.this, "bd_inventario", null, 1);
+
+        SQLiteDatabase db = admin.getWritableDatabase();
+
+        Cursor fila = db.rawQuery("select barcode from invtBarcode", null);
+
+        if(fila != null && fila.getCount() != 0) {
+            fila.moveToFirst();
+            do{
+                listaUsuarios.add(
+                        new Lecturas_Entidad(
+                                fila.getString(0)));
+            } while (fila.moveToNext());
+        } else {
+            Toast.makeText(this, "NO HAY REGISTROS", Toast.LENGTH_SHORT).show();
+        }
+        db.close();
+
+    }
+
+    private void exportarCSV() {
+        File carpeta = new File(Environment.getExternalStorageDirectory() + "/CSV");
+        String archivo = carpeta.toString() + "/" + "Colectora.csv";
+
+        boolean isCreate = false;
+        if(!carpeta.exists()){
+            isCreate = carpeta.mkdir();
+        }
+        try{
+            FileWriter fileWriter = new FileWriter(archivo);
+
+            ConexionSQLite admin = new ConexionSQLite(MainActivity.this, "bd_inventario", null, 1);
+            SQLiteDatabase db = admin.getWritableDatabase();
+
+            Cursor fila = db.rawQuery("select barcode from invtBarcode", null);
+            if(fila !=null && fila.getCount() !=0){
+                fila.moveToFirst();
+                do{
+                    fileWriter.append(fila.getString(0));
+                    fileWriter.append("\n");
+                } while (fila.moveToNext());
+            } else {
+                Toast.makeText(this, "NO HAY REGISTROS", Toast.LENGTH_SHORT).show();
+            }
+
+            db.close();
+            fileWriter.close();
+            Toast.makeText(this, "Se creo exitosamente el archivo CSV", Toast.LENGTH_SHORT).show();
+
+        } catch(Exception e) {
+
+        }
+
     }
 
     //METODO para Registrar BC escaneados
@@ -259,14 +355,17 @@ public class MainActivity extends AppCompatActivity {
     //METODO basico para limpiar el editText
     private void limpiar () {
 
-        txtCB.setText("");
+        // detalle por limpiado del edit text?
+        // txtCB.setText("");
+        txtCB.getText().clear();
     }
+
 
 
 
     //METODO para mostrar la BD al iniciar la aplicacion
 
-    public void mostrar(){
+    /*public void mostrar(){
 
         int valor1 = 0;
         long valor2 = 0;
@@ -281,11 +380,9 @@ public class MainActivity extends AppCompatActivity {
 
         if (cursor.moveToFirst()){
             do {
-                valor1 = cursor.getInt(0);
+                valor1 = cursor.getInt(String.format(valor1));
                 valor2 = cursor.getLong(1);
-                 items_arreglo.add(0,new Lecturas_Entidad(valor1, valor2));
-                lstLista.setAdapter(adaptador_items);
-                adaptador_items.notifyDataSetChanged();
+                items_arreglo.add(0,new Lecturas_Entidad(valor1, valor2));
                // lblMensaje.setText(Integer.toString(valor1) + " - "  + Long.toString(valor2) );
             }while (cursor.moveToNext());
         }
@@ -302,11 +399,10 @@ public class MainActivity extends AppCompatActivity {
                 lblMensaje.setText(cursor.getString(0));
 
                 // alista.add(0,new Lecturas_Entidad(oLectura.getIdentificador(), oLectura.getCodigoBarras()));
-            }*/
+            }
 
         db.close();
-        // lstLista.setAdapter(adaptador_items);
-        // adaptador_items.notifyDataSetChanged();
-    }
-
+        lstLista.setAdapter(adaptador_items);
+        adaptador_items.notifyDataSetChanged();
+    }*/
 }

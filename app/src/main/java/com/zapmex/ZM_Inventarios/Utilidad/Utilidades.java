@@ -1,4 +1,4 @@
-package com.example.test2.Utilidad;
+package com.zapmex.ZM_Inventarios.Utilidad;
 
 public class Utilidades {
 

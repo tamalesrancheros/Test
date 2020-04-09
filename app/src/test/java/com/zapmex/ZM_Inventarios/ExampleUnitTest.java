@@ -1,4 +1,4 @@
-package com.example.test2;
+package com.zapmex.ZM_Inventarios;
 
 import org.junit.Test;
 
